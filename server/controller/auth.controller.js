@@ -1,6 +1,10 @@
 import express from 'express'
 import User from '../models/user.model.js'
 import bcrypt from 'bcryptjs'
+import dotenv from 'dotenv'
+dotenv.config();
+import cookieparser from 'cookie-parser'
+import jwt from 'jsonwebtoken'
 
 
 export const test = async(req, res) => {
@@ -14,9 +18,79 @@ export const test = async(req, res) => {
 export const login = async(req, res) => {
     try {
         // console.log("login route api hit!!");
+        const {email, password} = req.body
+        //validdate
+        if(!email || !password )
+        {
+            return res.status(401).json({
+                success: false,
+                message: "Details not found, please fill out the necessary details."
+            })
+        }
+        //check if user exists or not
+        const user = await User.findOne({email})
+        if(!user)
+        {
+            return res.status(401).json({
+                success: false,
+                message: "User not registered, Please signUp first."
+            })
+        }
+        const payload = {
+            email: user.email,
+            id: user._id,
+            //add the account type if needed here
+        }
+        //if it exists then hash the password and generate token
+        if(await bcrypt.compare(password, user.password))
+        {
+            //generate token
+            const token = await jwt.sign(payload, process.env.JWT_SECRET,{expiresIn: "24h"} )
+            user.token = token;
+            user.password = undefined   //make the password undefind once the user is verified
+
+            //create the cookie
+            const options = {
+                expiresIn: new Date(Date.now() + 2*24*60*60*1000),
+                httpOnly: true,
+            }
+            res.cookie("Token", token, options ).status(200).json({
+                success: true,
+                message: "Logged in successfully.",
+                token,
+                user,
+            })
+        }
+        else{
+            return res.status(401).json({
+                success: false,
+                message: "unauthorized access. password is incorrect"
+            })
+        }
+
+        // ********LOGIN RESPONSE ************
+        // {
+        //     "success": true,
+        //     "message": "Logged in successfully.",
+        //     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFuc2hAZ21haWwuY29tIiwiaWQiOiI2NjMxZjdiNjU2ZTFkNzU3N2YzYTExZDMiLCJpYXQiOjE3MTQ1NTIxNDIsImV4cCI6MTcxNDYzODU0Mn0.BODJteFjuH-Ir2tAxocSx1_3oGoD47P8W3dDB7pED6g",
+        //     "user": {
+        //         "_id": "6631f7b656e1d7577f3a11d3",
+        //         "firstName": "Ansh",
+        //         "lastName": "Jain",
+        //         "email": "ansh@gmail.com",
+        //         "image": "https://api.dicebear.com/6.x/initials/svg?seed=Ansh%20Jain ",
+        //         "__v": 0,
+        //         "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFuc2hAZ21haWwuY29tIiwiaWQiOiI2NjMxZjdiNjU2ZTFkNzU3N2YzYTExZDMiLCJpYXQiOjE3MTQ1NTIxNDIsImV4cCI6MTcxNDYzODU0Mn0.BODJteFjuH-Ir2tAxocSx1_3oGoD47P8W3dDB7pED6g"
+        //     }
+        // }
+        
 
     } catch (error) {
         console.log('login error inside catch - ', error)
+        return res.status(404).json({
+            success: false,
+            message: "Something went wrong while logging in. Please try again after sometime."
+        })
     }
     
 }
