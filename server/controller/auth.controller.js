@@ -11,9 +11,20 @@ export const test = async(req, res) => {
 }
 
 export const login = async(req, res) => {
+    try {
+        // console.log("login route api hit!!");
+         
+    } catch (error) {
+        console.log('login error inside catch - ', error)
+    }
     
 }
 
 export const signup = async(req, res) => {
+    try {
+        
+    } catch (error) {
+        console.log("signup error inside catch - ", error)
+    }
     
 }
